@@ -177,5 +177,6 @@ api.add_resource(AdminLogout, '/logout')
 api.add_resource(data, '/data')
 api.add_resource(AddData, '/data/add')
 
-
-
+@app.route('/')
+def index():
+  return "<h1>Welcome to CodingX</h1>"
