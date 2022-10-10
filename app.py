@@ -9,6 +9,17 @@ from flask_jwt_extended import create_access_token , create_refresh_token
 from flask_jwt_extended import get_jwt_identity
 from flask_jwt_extended import jwt_required
 from flask_jwt_extended import JWTManager
+import math
+from datetime import date, datetime
+import datetime as dt
+from functools import wraps
+from flask_jwt_extended import (create_access_token,
+create_refresh_token,
+get_jwt_identity,get_jwt,
+verify_jwt_in_request)
+import requests
+from jwt import ExpiredSignatureError
+import jwt as libjwt
 
 mysql = MySQL()
 app = Flask(__name__)
@@ -16,8 +27,10 @@ app = Flask(__name__)
 # JWT Authentication
 # Setup the Flask-JWT-Extended extension
 app.config["JWT_SECRET_KEY"] = "super-secret"  # Change this!
+app.config['JWT_BLACKLIST_ENABLED'] = True
+app.config['JWT_BLACKLIST_TOKEN_CHECKS'] = ['access', 'refresh']
 jwt = JWTManager(app)
-
+blacklist = set()
 
 
 # MySQL configurations
@@ -30,8 +43,65 @@ mysql.init_app(app)
 api = Api(app)
 CORS(app)
 
-class data(Resource):
+
+def admin_role():
+    def wrapper(fn):
+        @wraps(fn)
+        def decorator(*args, **kwargs):
+            print()
+            try:
+                verify_jwt_in_request()
+            except ExpiredSignatureError:
+                return jsonify({"status":403,"msg":"Token has expired"})
+            claims = get_jwt()
+            try:
+                if claims["is_admin"]:
+                    return fn(*args, **kwargs)
+                else:
+                    return jsonify({"status":403,"msg":"Admins only Tokens!"})
+            except KeyError:
+                return jsonify({"status":403,"msg":"Admins only Tokens!"})
+        return decorator
+
+    return wrapper
+
+def jwt_required():
+    def wrapper(fn):
+        @wraps(fn)
+        def decorator(*args, **kwargs):     
+            try:
+                verify_jwt_in_request()
+                return fn(*args, **kwargs)
+            except ExpiredSignatureError:
+                return jsonify({"status":403,"msg":"Token has expired"})
+        return decorator
+
+    return wrapper
+
+    
+
+
+class AdminRefreshToken(Resource):
+    @admin_role()
     @jwt_required()
+    def get(self):
+        identity = get_jwt_identity()
+        expires = dt.timedelta(minutes=30)
+        access_token = create_access_token(identity=identity,additional_claims={"is_admin": True},expires_delta=expires)
+        refresh_token = create_refresh_token(identity=identity,additional_claims={"is_admin": True})
+        return jsonify({"access_token":access_token,"refresh_token":refresh_token}) 
+
+
+
+
+@jwt.token_in_blocklist_loader
+def check_if_token_in_blacklist(jwt_header, jwt_payload):
+    jti = jwt_payload['jti']
+    return jti in blacklist
+
+
+
+class data(Resource):
     def get(self):
         
         conn = mysql.connect()
@@ -59,7 +129,6 @@ class AddData(Resource):
         cursor.execute(query,val)
         conn.commit()
         return 200
-
 
 #ROUTES DEFINITIONS
 
@@ -91,14 +160,22 @@ class AdminLogin(Resource):
         else:
                
                return jsonify ({"status" : 401 , "message" : "Invalid Password"})
-            
+               
 
-api.add_resource(AdminLogin, '/Adminlogin')
+class AdminLogout(Resource):
+    # @admin_role()
+    @jwt_required()
+    def post(self):
+        jti = get_jwt()["jti"]
+        blacklist.add(jti)
+        return jsonify({"msg": "Admin Successfully logged out"})
+
+
+api.add_resource(AdminLogin, '/676a57f05ec18651378129cb96280d6df91073d5d6f6a3a1907c689c2503b7bc')
+api.add_resource(AdminLogout, '/logout')
 api.add_resource(data, '/data')
 api.add_resource(AddData, '/data/add')
 
 if __name__ == "__main__":
     app.run(debug=True)
-   
-
    
