@@ -177,7 +177,5 @@ api.add_resource(AdminLogout, '/logout')
 api.add_resource(data, '/data')
 api.add_resource(AddData, '/data/add')
 
-if __name__ == "__main__":
-    app.run(debug=True)
-   
+
 
