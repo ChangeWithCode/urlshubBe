@@ -17,7 +17,6 @@ from flask_jwt_extended import (create_access_token,
 create_refresh_token,
 get_jwt_identity,get_jwt,
 verify_jwt_in_request)
-import requests
 from jwt import ExpiredSignatureError
 import jwt as libjwt
 
