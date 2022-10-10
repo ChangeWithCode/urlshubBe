@@ -102,6 +102,7 @@ def check_if_token_in_blacklist(jwt_header, jwt_payload):
 
 
 class data(Resource):
+    @jwt_required()
     def get(self):
         
         conn = mysql.connect()
@@ -171,7 +172,7 @@ class AdminLogout(Resource):
         return jsonify({"msg": "Admin Successfully logged out"})
 
 
-api.add_resource(AdminLogin, '/676a57f05ec18651378129cb96280d6df91073d5d6f6a3a1907c689c2503b7bc')
+api.add_resource(AdminLogin, '/Adminlogin')
 api.add_resource(AdminLogout, '/logout')
 api.add_resource(data, '/data')
 api.add_resource(AddData, '/data/add')
@@ -179,3 +180,4 @@ api.add_resource(AddData, '/data/add')
 if __name__ == "__main__":
     app.run(debug=True)
    
+
